@@ -1,0 +1,35 @@
+[package]
+name = "byps"
+version = "0.1.0"
+edition = "2021"
+authors = ["HazaVVIP"]
+description = "CLI bypass tool for WAF and access control testing"
+license = "MIT"
+repository = "https://github.com/HazaVVIP/byps"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive", "cargo"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+anyhow = "1.0"
+thiserror = "1.0"
+colored = "2.1"
+indicatif = "0.17"
+libc = "0.2"
+
+[build-dependencies]
+cc = "1.0"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bin]]
+name = "byps"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
