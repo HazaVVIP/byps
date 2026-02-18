@@ -41,6 +41,12 @@ int byps_engine_test_technique(BypsEngine* engine,
                                const char* technique_name,
                                char** result_json);
 
+// Test variations with actual HTTP requests (for exploit mode)
+int byps_engine_test_variations(BypsEngine* engine,
+                               const char* base_url,
+                               const char* config_json,
+                               char** result_json);
+
 // Detect WAF type
 int byps_engine_detect_waf(BypsEngine* engine,
                            const char* url,

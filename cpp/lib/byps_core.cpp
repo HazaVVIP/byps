@@ -6,9 +6,11 @@
 #include "techniques/path_bypass.hpp"
 #include "techniques/header_forge.hpp"
 #include "techniques/encoding.hpp"
+#include "network/http_client.hpp"
 #include <cstring>
 #include <memory>
 #include <sstream>
+#include <iomanip>
 
 using namespace byps;
 
@@ -17,12 +19,18 @@ struct BypsEngine {
     std::unique_ptr<PathBypass> path_bypass;
     std::unique_ptr<HeaderForge> header_forge;
     std::unique_ptr<Encoding> encoding;
+    std::unique_ptr<network::HttpClient> http_client;
     std::string last_error;
     
     BypsEngine() 
         : path_bypass(std::make_unique<PathBypass>()),
           header_forge(std::make_unique<HeaderForge>()),
-          encoding(std::make_unique<Encoding>()) {
+          encoding(std::make_unique<Encoding>()),
+          http_client(std::make_unique<network::HttpClient>()) {
+        // Configure HTTP client for bypass testing
+        http_client->setTimeout(30000);
+        http_client->setFollowRedirects(false);
+        http_client->setVerifySSL(false);
     }
 };
 
@@ -177,6 +185,137 @@ int byps_engine_detect_waf(BypsEngine* engine,
         return BYPS_SUCCESS;
     } catch (const std::exception& e) {
         engine->last_error = e.what();
+        return BYPS_ERROR_UNKNOWN;
+    }
+}
+
+int byps_engine_test_variations(BypsEngine* engine,
+                               const char* base_url,
+                               const char* config_json,
+                               char** result_json) {
+    if (!engine || !base_url || !result_json) {
+        return BYPS_ERROR_INVALID_URL;
+    }
+    
+    try {
+        Logger::getInstance().info(std::string("Testing variations for: ") + base_url);
+        
+        // Parse URL
+        auto parsed = utils::parseURL(base_url);
+        
+        // Generate bypass variations
+        auto path_variations = engine->path_bypass->generateVariations(parsed.path);
+        
+        // Test baseline request first
+        std::string baseline_url = base_url;
+        auto baseline_response = engine->http_client->get(baseline_url);
+        int baseline_status = baseline_response.status_code;
+        size_t baseline_size = baseline_response.body.length();
+        
+        Logger::getInstance().info("Baseline status: " + std::to_string(baseline_status) + 
+                                 ", size: " + std::to_string(baseline_size));
+        
+        // Build result JSON with tested variations
+        std::stringstream ss;
+        ss << "{\"baseline\":{";
+        ss << "\"status\":" << baseline_status << ",";
+        ss << "\"size\":" << baseline_size << ",";
+        ss << "\"time\":" << baseline_response.response_time_ms;
+        ss << "},\"variations\":[";
+        
+        bool first = true;
+        int successful_bypasses = 0;
+        int total_tested = 0;
+        
+        for (const auto& variation : path_variations) {
+            if (total_tested >= 50) break; // Limit for safety
+            
+            // Construct full URL with variation
+            std::string test_url = parsed.scheme + "://" + parsed.host;
+            if (parsed.port != 80 && parsed.port != 443) {
+                test_url += ":" + std::to_string(parsed.port);
+            }
+            test_url += variation;
+            if (!parsed.query.empty()) {
+                test_url += "?" + parsed.query;
+            }
+            
+            // Execute HTTP request
+            auto response = engine->http_client->get(test_url);
+            total_tested++;
+            
+            // Check if bypass was successful
+            bool bypass_success = false;
+            std::string bypass_reason = "failed";
+            
+            // Success criteria: status code changed from 403/401 to 200/30x or size changed significantly
+            if (baseline_status >= 400 && response.status_code >= 200 && response.status_code < 400) {
+                bypass_success = true;
+                bypass_reason = "status_change";
+                successful_bypasses++;
+            } else if (response.status_code == baseline_status) {
+                // Check for significant size difference (might indicate different content)
+                if (baseline_size > 0 && response.body.length() > 0) {
+                    double size_diff_ratio = std::abs(static_cast<double>(response.body.length()) - 
+                                                      static_cast<double>(baseline_size)) / baseline_size;
+                    if (size_diff_ratio > 0.3) { // 30% size difference
+                        bypass_success = true;
+                        bypass_reason = "size_difference";
+                        successful_bypasses++;
+                    }
+                }
+            }
+            
+            // Add to JSON
+            if (!first) ss << ",";
+            first = false;
+            
+            ss << "{";
+            ss << "\"variation\":\"";
+            // Escape the variation string for JSON
+            for (size_t i = 0; i < variation.length(); ++i) {
+                unsigned char c = static_cast<unsigned char>(variation[i]);
+                if (c == '\0') ss << "\\u0000"; // Null byte
+                else if (c == '"') ss << "\\\"";
+                else if (c == '\\') ss << "\\\\";
+                else if (c == '\n') ss << "\\n";
+                else if (c == '\r') ss << "\\r";
+                else if (c == '\t') ss << "\\t";
+                else if (c < 32 || c == 127) { // Control characters
+                    ss << "\\u" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << static_cast<int>(c) << std::dec << std::nouppercase;
+                }
+                else ss << static_cast<char>(c);
+            }
+            ss << "\",";
+            ss << "\"status\":" << response.status_code << ",";
+            ss << "\"size\":" << response.body.length() << ",";
+            ss << "\"time\":" << response.response_time_ms << ",";
+            ss << "\"bypass\":" << (bypass_success ? "true" : "false") << ",";
+            ss << "\"reason\":\"" << bypass_reason << "\"";
+            ss << "}";
+            
+            Logger::getInstance().info("Tested: " + variation + " -> " + 
+                                     std::to_string(response.status_code) + 
+                                     (bypass_success ? " (BYPASS!)" : ""));
+        }
+        
+        ss << "],";
+        ss << "\"summary\":{";
+        ss << "\"total_tested\":" << total_tested << ",";
+        ss << "\"successful_bypasses\":" << successful_bypasses << ",";
+        ss << "\"failed_attempts\":" << (total_tested - successful_bypasses);
+        ss << "}}";
+        
+        *result_json = string_to_c_str(ss.str());
+        return BYPS_SUCCESS;
+        
+    } catch (const BypsException& e) {
+        engine->last_error = e.what();
+        Logger::getInstance().error(e.what());
+        return static_cast<int>(e.code());
+    } catch (const std::exception& e) {
+        engine->last_error = e.what();
+        Logger::getInstance().error(e.what());
         return BYPS_ERROR_UNKNOWN;
     }
 }
