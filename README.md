@@ -15,6 +15,30 @@ This tool is designed for security professionals to test systems they have expli
 
 ## ✨ Features
 
+### CLI Modes
+- **Scan Mode**: Generate bypass variations for manual testing
+- **Test Mode**: Test a specific bypass technique
+- **Exploit Mode** ⭐NEW: Automated exploitation with live testing
+- **Wizard Mode** ⭐NEW: Interactive guided testing for beginners
+- **Detect Mode**: WAF fingerprinting and detection
+- **List Mode**: Display all available techniques
+
+### Enhanced Help System
+Comprehensive help text with:
+- Detailed command descriptions
+- Strategy explanations (fast, balanced, thorough, stealth)
+- Technique documentation
+- Real-world usage examples
+- Output format guidance
+
+```bash
+# Access enhanced help
+byps --help              # Main help with all features
+byps scan --help         # Scan-specific help with examples
+byps exploit --help      # Exploit mode documentation
+byps wizard --help       # Wizard mode guide
+```
+
 ### Bypass Techniques
 - **Path Manipulation**: Trailing slash, URL encoding, case variation, path traversal
 - **Header Forgery**: X-Forwarded-For, X-Original-URL, Host header manipulation
@@ -67,6 +91,10 @@ cargo build --release
 ### Usage
 
 ```bash
+# Display help
+./target/release/byps -h           # Short help
+./target/release/byps --help       # Detailed help with examples
+
 # List available bypass techniques
 ./target/release/byps list
 
@@ -75,6 +103,12 @@ cargo build --release
 
 # Full scan with all techniques
 ./target/release/byps scan http://example.com/admin
+
+# Automated exploitation mode (NEW!)
+./target/release/byps exploit http://example.com/admin
+
+# Interactive wizard mode (NEW!)
+./target/release/byps wizard
 
 # Save results to file
 ./target/release/byps scan http://example.com/admin -o results.html --output html
@@ -85,6 +119,54 @@ cargo build --release
 # Verbose output
 ./target/release/byps scan http://example.com/admin -v --output terminal
 ```
+
+## 🎯 New Features
+
+### Exploit Mode
+Automated exploitation mode that combines scanning with live testing:
+
+```bash
+# Basic exploitation
+./target/release/byps exploit http://example.com/admin
+
+# Fast exploitation with specific techniques
+./target/release/byps exploit http://example.com/api -t path_bypass,header_forge -s fast
+
+# Thorough exploitation with results saved
+./target/release/byps exploit http://example.com/secret -s thorough -o exploits.json
+
+# Stealth exploitation with limited tests
+./target/release/byps exploit http://example.com/admin -s stealth -m 20 -v
+```
+
+**Features:**
+- Automatically generates and tests bypass variations
+- Reports successful bypasses with visual indicators
+- Configurable test limits and strategies
+- Saves working exploits to file
+- Beautiful colored output with progress tracking
+
+### Wizard Mode
+Interactive guided mode perfect for beginners:
+
+```bash
+# Start the interactive wizard
+./target/release/byps wizard
+
+# Wizard with verbose output
+./target/release/byps wizard -v
+```
+
+**Wizard Process:**
+1. Enter target URL
+2. Select mode (scan or exploit)
+3. Choose bypass techniques
+4. Select scan strategy
+5. Optional file output
+6. Review and confirm settings
+7. Execute and view results
+
+The wizard provides a user-friendly interface with step-by-step guidance through the entire bypass testing process.
 
 ## 📖 Examples
 
