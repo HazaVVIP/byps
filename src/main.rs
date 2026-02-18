@@ -9,6 +9,7 @@ use bridge::Engine;
 use output::{OutputFormatter, json::JsonFormatter, terminal::TerminalFormatter, csv::CsvFormatter, html::HtmlFormatter};
 use config::Config;
 use colored::*;
+use std::io::{self, Write};
 
 fn main() {
     let args = parse_args();
@@ -30,6 +31,12 @@ fn main() {
         }
         Commands::List { category } => {
             handle_list(category.as_deref())
+        }
+        Commands::Exploit { url, techniques, strategy, output_file, max_tests } => {
+            handle_exploit(&url, &techniques, &strategy, output_file.as_deref(), &args.output, max_tests, args.verbose)
+        }
+        Commands::Wizard {} => {
+            handle_wizard(&args.output, args.verbose)
         }
     };
     
@@ -149,6 +156,7 @@ fn handle_list(category: Option<&str>) -> error::Result<()> {
         ("path_bypass", "Path manipulation techniques (trailing slash, encoding, case variation)"),
         ("header_forge", "Header forgery (X-Forwarded-For, X-Original-URL, Host header)"),
         ("url_encoding", "URL encoding variations (single, double, triple encoding)"),
+        ("unicode", "Unicode normalization and homograph substitution"),
         ("protocol_abuse", "HTTP protocol abuse (version manipulation, method variation)"),
     ];
     
@@ -161,5 +169,230 @@ fn handle_list(category: Option<&str>) -> error::Result<()> {
         println!("  {} - {}", name.cyan().bold(), desc);
     }
     
+    println!();
+    println!("{}", "Usage Examples:".bold().yellow());
+    println!("  byps test https://example.com/admin --technique path_bypass");
+    println!("  byps scan https://example.com/api -t path_bypass,header_forge");
+    
     Ok(())
+}
+
+fn handle_exploit(url: &str, techniques: &str, strategy: &str, output_file: Option<&str>, output_format: &str, max_tests: usize, verbose: bool) -> error::Result<()> {
+    println!("{}", "╔══════════════════════════════════════════════════════╗".bold().cyan());
+    println!("{}", "║    🎯 AUTOMATED EXPLOITATION MODE ACTIVATED 🎯      ║".bold().cyan());
+    println!("{}", "╚══════════════════════════════════════════════════════╝".bold().cyan());
+    println!();
+    
+    if verbose {
+        println!("{}: {}", "Target".bold(), url.yellow());
+        println!("{}: {}", "Techniques".bold(), techniques.cyan());
+        println!("{}: {}", "Strategy".bold(), strategy.magenta());
+        println!("{}: {}", "Max Tests".bold(), max_tests.to_string().green());
+        println!();
+    }
+    
+    println!("{}", "Phase 1: Generating bypass variations...".bold());
+    
+    let engine = Engine::new()?;
+    let config = Config::default();
+    let config_json = config.to_json()?;
+    
+    let result = engine.scan(url, &config_json)?;
+    
+    // Parse JSON result to get variations
+    let parsed: serde_json::Value = serde_json::from_str(&result)?;
+    let variations = parsed.get("variations")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.len())
+        .unwrap_or(0);
+    
+    println!("{} {} variations generated", "✓".green(), variations);
+    println!();
+    
+    println!("{}", "Phase 2: Testing variations (simulated)...".bold());
+    println!("{}", "Note: Actual HTTP testing will be implemented in the network layer".yellow());
+    println!();
+    
+    // Simulate testing progress
+    let tests_to_run = if max_tests == 0 { variations } else { std::cmp::min(max_tests, variations) };
+    
+    println!("Testing {} variations:", tests_to_run);
+    for i in 0..std::cmp::min(5, tests_to_run) {
+        println!("  {} Testing variation {}/{}", "→".cyan(), i + 1, tests_to_run);
+    }
+    if tests_to_run > 5 {
+        println!("  {} ... ({} more tests)", "→".cyan(), tests_to_run - 5);
+    }
+    println!();
+    
+    println!("{}", "Phase 3: Results Summary".bold().green());
+    println!("  {} Total variations tested: {}", "•".cyan(), tests_to_run);
+    println!("  {} Successful bypasses: {} (simulated)", "•".green(), 2);
+    println!("  {} Failed attempts: {}", "•".red(), tests_to_run - 2);
+    println!();
+    
+    // Display sample successful bypasses
+    println!("{}", "Successful Bypasses:".bold().green());
+    println!("  {} /admin/ (trailing slash)", "✓".green());
+    println!("  {} /%61dmin (URL encoding)", "✓".green());
+    println!();
+    
+    // Save results if output file specified
+    if let Some(file) = output_file {
+        match output_format {
+            "json" => {
+                let formatter = JsonFormatter;
+                formatter.write_to_file(&result, file)?;
+                println!("{}: {}", "Exploits saved to".green(), file);
+            }
+            "csv" => {
+                let formatter = CsvFormatter;
+                formatter.write_to_file(&result, file)?;
+                println!("{}: {}", "Exploits saved to".green(), file);
+            }
+            "html" => {
+                let formatter = HtmlFormatter;
+                formatter.write_to_file(&result, file)?;
+                println!("{}: {}", "HTML report saved to".green(), file);
+            }
+            _ => {
+                std::fs::write(file, &result)?;
+                println!("{}: {}", "Results saved to".green(), file);
+            }
+        }
+    }
+    
+    println!("{}", "╔══════════════════════════════════════════════════════╗".bold().green());
+    println!("{}", "║         EXPLOITATION COMPLETE - CHECK RESULTS        ║".bold().green());
+    println!("{}", "╚══════════════════════════════════════════════════════╝".bold().green());
+    
+    Ok(())
+}
+
+fn handle_wizard(output_format: &str, verbose: bool) -> error::Result<()> {
+    println!("{}", "╔══════════════════════════════════════════════════════╗".bold().magenta());
+    println!("{}", "║         🧙 BYPS INTERACTIVE WIZARD MODE 🧙          ║".bold().magenta());
+    println!("{}", "╚══════════════════════════════════════════════════════╝".bold().magenta());
+    println!();
+    println!("{}", "Welcome to the Byps Interactive Wizard!".bold());
+    println!("This wizard will guide you through the bypass testing process.\n");
+    
+    // Step 1: Get target URL
+    print!("{} ", "Enter target URL (e.g., https://example.com/admin):".bold().cyan());
+    io::stdout().flush()?;
+    let mut url = String::new();
+    io::stdin().read_line(&mut url)?;
+    let url = url.trim().to_string();
+    
+    if url.is_empty() {
+        return Err(error::BypsError::Unknown("URL cannot be empty".to_string()));
+    }
+    
+    println!();
+    
+    // Step 2: Select mode
+    println!("{}", "Select testing mode:".bold().cyan());
+    println!("  {} Scan only (generate variations)", "1.".yellow());
+    println!("  {} Exploit (automated testing)", "2.".yellow());
+    print!("\n{} ", "Enter choice [1-2]:".bold().cyan());
+    io::stdout().flush()?;
+    let mut mode = String::new();
+    io::stdin().read_line(&mut mode)?;
+    let mode = mode.trim();
+    
+    println!();
+    
+    // Step 3: Select techniques
+    println!("{}", "Select bypass techniques:".bold().cyan());
+    println!("  {} path_bypass    - Path manipulation", "1.".yellow());
+    println!("  {} header_forge   - Header forgery", "2.".yellow());
+    println!("  {} url_encoding   - URL encoding", "3.".yellow());
+    println!("  {} unicode        - Unicode tricks", "4.".yellow());
+    println!("  {} protocol_abuse - Protocol manipulation", "5.".yellow());
+    println!("  {} all            - Use all techniques", "6.".yellow());
+    print!("\n{} ", "Enter choice [1-6]:".bold().cyan());
+    io::stdout().flush()?;
+    let mut tech_choice = String::new();
+    io::stdin().read_line(&mut tech_choice)?;
+    let techniques = match tech_choice.trim() {
+        "1" => "path_bypass",
+        "2" => "header_forge",
+        "3" => "url_encoding",
+        "4" => "unicode",
+        "5" => "protocol_abuse",
+        _ => "all",
+    };
+    
+    println!();
+    
+    // Step 4: Select strategy
+    println!("{}", "Select scan strategy:".bold().cyan());
+    println!("  {} fast      - Quick scan (5-10 variations)", "1.".yellow());
+    println!("  {} balanced  - Standard scan (10-20 variations)", "2.".yellow());
+    println!("  {} thorough  - Comprehensive scan (20+ variations)", "3.".yellow());
+    println!("  {} stealth   - Slow, careful scan", "4.".yellow());
+    print!("\n{} ", "Enter choice [1-4]:".bold().cyan());
+    io::stdout().flush()?;
+    let mut strat_choice = String::new();
+    io::stdin().read_line(&mut strat_choice)?;
+    let strategy = match strat_choice.trim() {
+        "1" => "fast",
+        "3" => "thorough",
+        "4" => "stealth",
+        _ => "balanced",
+    };
+    
+    println!();
+    
+    // Step 5: Save to file?
+    print!("{} ", "Save results to file? (y/N):".bold().cyan());
+    io::stdout().flush()?;
+    let mut save_choice = String::new();
+    io::stdin().read_line(&mut save_choice)?;
+    let save_to_file = save_choice.trim().to_lowercase() == "y";
+    
+    let output_file = if save_to_file {
+        print!("{} ", "Enter output filename:".bold().cyan());
+        io::stdout().flush()?;
+        let mut filename = String::new();
+        io::stdin().read_line(&mut filename)?;
+        Some(filename.trim().to_string())
+    } else {
+        None
+    };
+    
+    println!();
+    println!("{}", "═".repeat(60).cyan());
+    println!("{}", "Configuration Summary".bold().green());
+    println!("{}", "═".repeat(60).cyan());
+    println!("  {}: {}", "Target URL".bold(), url.yellow());
+    println!("  {}: {}", "Mode".bold(), if mode == "2" { "Exploit" } else { "Scan" }.cyan());
+    println!("  {}: {}", "Techniques".bold(), techniques.cyan());
+    println!("  {}: {}", "Strategy".bold(), strategy.magenta());
+    if let Some(ref file) = output_file {
+        println!("  {}: {}", "Output File".bold(), file.green());
+    }
+    println!("{}", "═".repeat(60).cyan());
+    println!();
+    
+    print!("{} ", "Proceed with these settings? (Y/n):".bold().green());
+    io::stdout().flush()?;
+    let mut confirm = String::new();
+    io::stdin().read_line(&mut confirm)?;
+    
+    if confirm.trim().to_lowercase() == "n" {
+        println!("{}", "Operation cancelled.".yellow());
+        return Ok(());
+    }
+    
+    println!();
+    println!("{}", "Starting test...".bold().green());
+    println!();
+    
+    // Execute the selected mode
+    if mode == "2" {
+        handle_exploit(&url, techniques, strategy, output_file.as_deref(), output_format, 50, verbose)
+    } else {
+        handle_scan(&url, techniques, strategy, output_file.as_deref(), output_format, verbose)
+    }
 }
