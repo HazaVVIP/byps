@@ -273,7 +273,8 @@ int byps_engine_test_variations(BypsEngine* engine,
             ss << "{";
             ss << "\"variation\":\"";
             // Escape the variation string for JSON
-            for (char c : variation) {
+            for (size_t i = 0; i < variation.length(); ++i) {
+                unsigned char c = static_cast<unsigned char>(variation[i]);
                 if (c == '\0') ss << "\\u0000"; // Null byte
                 else if (c == '"') ss << "\\\"";
                 else if (c == '\\') ss << "\\\\";
@@ -281,10 +282,9 @@ int byps_engine_test_variations(BypsEngine* engine,
                 else if (c == '\r') ss << "\\r";
                 else if (c == '\t') ss << "\\t";
                 else if (c < 32 || c == 127) { // Control characters
-                    ss << "\\u" << std::hex << std::setfill('0') << std::setw(4) << static_cast<int>(static_cast<unsigned char>(c));
-                    ss << std::dec; // Reset to decimal
+                    ss << "\\u" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << static_cast<int>(c) << std::dec << std::nouppercase;
                 }
-                else ss << c;
+                else ss << static_cast<char>(c);
             }
             ss << "\",";
             ss << "\"status\":" << response.status_code << ",";
