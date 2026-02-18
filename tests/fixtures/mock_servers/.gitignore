@@ -1,0 +1,6 @@
+# Ignore log files and runtime data
+logs/
+__pycache__/
+*.pyc
+*.pyo
+*.pid
