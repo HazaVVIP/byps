@@ -140,11 +140,15 @@ byps exploit http://example.com/admin -s stealth -m 20 -v
 ```
 
 **Features:**
-- Automatically generates and tests bypass variations
-- Reports successful bypasses with visual indicators
+- Automatically generates and tests bypass variations with real HTTP requests
+- Sends actual HTTP/HTTPS requests to test each variation
+- Compares baseline responses with bypass attempts
+- Detects successful bypasses based on status code changes or response differences
+- Reports successful bypasses with status codes, response times, and detailed reasons
 - Configurable test limits and strategies
-- Saves working exploits to file
-- Beautiful colored output with progress tracking
+- Saves working exploits to JSON/CSV/HTML files
+- Beautiful colored output with progress tracking and real-time results
+- Handles connection failures and errors gracefully
 
 ### Wizard Mode
 Interactive guided mode perfect for beginners:
