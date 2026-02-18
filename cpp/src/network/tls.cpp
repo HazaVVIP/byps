@@ -2,7 +2,9 @@
 #include "common/logger.hpp"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/x509.h>
 #include <cstring>
+#include <unistd.h>
 
 namespace byps {
 namespace network {
@@ -85,7 +87,7 @@ public:
             SSL_free(ssl);
         }
         if (sockfd >= 0) {
-            close(sockfd);
+            ::close(sockfd);
         }
     }
 };
