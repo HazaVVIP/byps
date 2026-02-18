@@ -256,11 +256,11 @@ int byps_engine_test_variations(BypsEngine* engine,
             // Success criteria: status code changed from 403/401 to 200/30x
             else if (baseline_status >= 400 && response.status_code >= 200 && response.status_code < 400) {
                 // Additional check: verify it's not a soft 404 or redirect to error page
-                // Check for common error page indicators in response body
-                if (response.body.find("404") != std::string::npos || 
-                    response.body.find("not found") != std::string::npos ||
-                    response.body.find("Not Found") != std::string::npos ||
-                    response.body.find("Page not found") != std::string::npos) {
+                // Check for common error page indicators in response body (case-insensitive)
+                std::string body_lower = utils::toLower(response.body);
+                if (body_lower.find("404") != std::string::npos || 
+                    body_lower.find("not found") != std::string::npos ||
+                    body_lower.find("page not found") != std::string::npos) {
                     // Body contains error indicators
                     bypass_success = false;
                     bypass_reason = "soft_404_detected";
