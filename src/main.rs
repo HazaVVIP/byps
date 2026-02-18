@@ -209,54 +209,132 @@ fn handle_exploit(url: &str, techniques: &str, strategy: &str, output_file: Opti
     println!("{} {} variations generated", "✓".green(), variations);
     println!();
     
-    println!("{}", "Phase 2: Testing variations (simulated)...".bold());
-    println!("{}", "Note: Actual HTTP testing will be implemented in the network layer".yellow());
+    println!("{}", "Phase 2: Testing variations with HTTP requests...".bold());
+    if verbose {
+        println!("{}", "Sending real HTTP requests to test bypasses".yellow());
+    }
     println!();
     
-    // Simulate testing progress
-    let tests_to_run = if max_tests == 0 { variations } else { std::cmp::min(max_tests, variations) };
+    // Actually test variations with HTTP requests
+    let test_result = engine.test_variations(url, &config_json)?;
     
-    println!("Testing {} variations:", tests_to_run);
-    for i in 0..std::cmp::min(5, tests_to_run) {
-        println!("  {} Testing variation {}/{}", "→".cyan(), i + 1, tests_to_run);
+    // Parse test results
+    let test_parsed: serde_json::Value = serde_json::from_str(&test_result)?;
+    
+    // Get baseline info
+    let baseline_status = test_parsed.get("baseline")
+        .and_then(|b| b.get("status"))
+        .and_then(|s| s.as_i64())
+        .unwrap_or(0) as i32;
+    
+    let baseline_size = test_parsed.get("baseline")
+        .and_then(|b| b.get("size"))
+        .and_then(|s| s.as_i64())
+        .unwrap_or(0) as usize;
+    
+    if verbose {
+        println!("Baseline request: status={}, size={} bytes", baseline_status, baseline_size);
+        println!();
     }
-    if tests_to_run > 5 {
-        println!("  {} ... ({} more tests)", "→".cyan(), tests_to_run - 5);
+    
+    // Get test summary
+    let total_tested = test_parsed.get("summary")
+        .and_then(|s| s.get("total_tested"))
+        .and_then(|t| t.as_i64())
+        .unwrap_or(0) as usize;
+    
+    let successful_bypasses = test_parsed.get("summary")
+        .and_then(|s| s.get("successful_bypasses"))
+        .and_then(|t| t.as_i64())
+        .unwrap_or(0) as usize;
+    
+    let failed_attempts = test_parsed.get("summary")
+        .and_then(|s| s.get("failed_attempts"))
+        .and_then(|t| t.as_i64())
+        .unwrap_or(0) as usize;
+    
+    println!("Testing {} variations:", total_tested);
+    
+    // Show progress for first few tests
+    let empty_vec = vec![];
+    let variations_tested = test_parsed.get("variations")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&empty_vec);
+    
+    for (i, var) in variations_tested.iter().take(std::cmp::min(5, total_tested)).enumerate() {
+        let variation = var.get("variation").and_then(|v| v.as_str()).unwrap_or("?");
+        let status = var.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
+        let is_bypass = var.get("bypass").and_then(|b| b.as_bool()).unwrap_or(false);
+        
+        if verbose {
+            let marker = if is_bypass { "✓".green() } else { "→".cyan() };
+            println!("  {} Testing variation {}/{}: {} -> {}", 
+                     marker, i + 1, total_tested, variation, status);
+        } else {
+            println!("  {} Testing variation {}/{}", "→".cyan(), i + 1, total_tested);
+        }
+    }
+    
+    if total_tested > 5 {
+        println!("  {} ... ({} more tests)", "→".cyan(), total_tested - 5);
     }
     println!();
     
     println!("{}", "Phase 3: Results Summary".bold().green());
-    println!("  {} Total variations tested: {}", "•".cyan(), tests_to_run);
-    println!("  {} Successful bypasses: {} (simulated)", "•".green(), 2);
-    println!("  {} Failed attempts: {}", "•".red(), tests_to_run - 2);
+    println!("  {} Total variations tested: {}", "•".cyan(), total_tested);
+    println!("  {} Successful bypasses: {}", "•".green(), successful_bypasses);
+    println!("  {} Failed attempts: {}", "•".red(), failed_attempts);
     println!();
     
-    // Display sample successful bypasses
-    println!("{}", "Successful Bypasses:".bold().green());
-    println!("  {} /admin/ (trailing slash)", "✓".green());
-    println!("  {} /%61dmin (URL encoding)", "✓".green());
+    // Display successful bypasses
+    if successful_bypasses > 0 {
+        println!("{}", "Successful Bypasses:".bold().green());
+        let mut bypass_count = 0;
+        for var in variations_tested.iter() {
+            let is_bypass = var.get("bypass").and_then(|b| b.as_bool()).unwrap_or(false);
+            if is_bypass {
+                let variation = var.get("variation").and_then(|v| v.as_str()).unwrap_or("?");
+                let status = var.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
+                let reason = var.get("reason").and_then(|r| r.as_str()).unwrap_or("unknown");
+                
+                println!("  {} {} (status: {}, reason: {})", "✓".green(), variation, status, reason);
+                bypass_count += 1;
+                
+                if bypass_count >= 10 && !verbose {
+                    let remaining = successful_bypasses - bypass_count;
+                    if remaining > 0 {
+                        println!("  {} ... ({} more bypasses found)", "✓".green(), remaining);
+                    }
+                    break;
+                }
+            }
+        }
+    } else {
+        println!("{}", "No successful bypasses found.".yellow());
+        println!("{}", "  The target may not be vulnerable to these techniques.".yellow());
+    }
     println!();
     
     // Save results if output file specified
     if let Some(file) = output_file {
         match output_format {
             "json" => {
-                let formatter = JsonFormatter;
-                formatter.write_to_file(&result, file)?;
+                std::fs::write(file, &test_result)?;
                 println!("{}: {}", "Exploits saved to".green(), file);
             }
             "csv" => {
+                // Convert JSON to CSV format
                 let formatter = CsvFormatter;
-                formatter.write_to_file(&result, file)?;
+                formatter.write_to_file(&test_result, file)?;
                 println!("{}: {}", "Exploits saved to".green(), file);
             }
             "html" => {
                 let formatter = HtmlFormatter;
-                formatter.write_to_file(&result, file)?;
+                formatter.write_to_file(&test_result, file)?;
                 println!("{}: {}", "HTML report saved to".green(), file);
             }
             _ => {
-                std::fs::write(file, &result)?;
+                std::fs::write(file, &test_result)?;
                 println!("{}: {}", "Results saved to".green(), file);
             }
         }

@@ -23,6 +23,12 @@ extern "C" {
         technique_name: *const c_char,
         result_json: *mut *mut c_char,
     ) -> i32;
+    pub fn byps_engine_test_variations(
+        engine: *mut BypsEngine,
+        base_url: *const c_char,
+        config_json: *const c_char,
+        result_json: *mut *mut c_char,
+    ) -> i32;
     pub fn byps_engine_detect_waf(
         engine: *mut BypsEngine,
         url: *const c_char,
@@ -90,6 +96,39 @@ impl Engine {
                 self.ptr,
                 url_c.as_ptr(),
                 technique_c.as_ptr(),
+                &mut result_ptr as *mut *mut c_char,
+            )
+        };
+        
+        if error_code != 0 {
+            return Err(BypsError::from(error_code));
+        }
+        
+        if result_ptr.is_null() {
+            return Err(BypsError::Unknown("Null result".to_string()));
+        }
+        
+        let result = unsafe {
+            let c_str = CStr::from_ptr(result_ptr);
+            let rust_str = c_str.to_string_lossy().into_owned();
+            byps_string_free(result_ptr);
+            rust_str
+        };
+        
+        Ok(result)
+    }
+    
+    pub fn test_variations(&self, url: &str, config: &str) -> Result<String> {
+        let url_c = CString::new(url).map_err(|_| BypsError::InvalidUrl(url.to_string()))?;
+        let config_c = CString::new(config).unwrap_or_else(|_| CString::new("{}").unwrap());
+        
+        let mut result_ptr: *mut c_char = std::ptr::null_mut();
+        
+        let error_code = unsafe {
+            byps_engine_test_variations(
+                self.ptr,
+                url_c.as_ptr(),
+                config_c.as_ptr(),
                 &mut result_ptr as *mut *mut c_char,
             )
         };
