@@ -64,39 +64,29 @@ std::vector<std::string> PathBypass::addTrailingSlash(const std::string& path) {
 std::vector<std::string> PathBypass::urlEncodingVariations(const std::string& path) {
     std::vector<std::string> variations;
     
-    // Single encoding
-    variations.push_back(utils::urlEncode(path));
-    
-    // Double encoding
-    variations.push_back(utils::urlEncodeMultiple(path, 2));
-    
-    // Triple encoding
-    variations.push_back(utils::urlEncodeMultiple(path, 3));
-    
-    // Partial encoding - encode only first character
-    if (!path.empty() && path[0] == '/') {
-        std::string partial = "%2f" + path.substr(1);
-        variations.push_back(partial);
-    }
-    
-    // Mixed case encoding
-    std::string mixed;
-    for (char c : path) {
-        if (c == 'a' || c == 'A') {
-            mixed += "%61";  // lowercase 'a'
-        } else if (c == 'd' || c == 'D') {
-            mixed += "%64";  // lowercase 'd'
-        } else if (c == 'm' || c == 'M') {
-            mixed += "%6d";  // lowercase 'm'
-        } else if (c == 'i' || c == 'I') {
-            mixed += "%69";  // lowercase 'i'
-        } else if (c == 'n' || c == 'N') {
-            mixed += "%6e";  // lowercase 'n'
-        } else {
-            mixed += c;
+    // Partial encoding - encode characters after the leading slash
+    // Don't encode the leading slash to avoid hostname confusion
+    if (!path.empty() && path.length() > 1) {
+        std::string encoded_path;
+        for (size_t i = 0; i < path.length(); ++i) {
+            char c = path[i];
+            // Keep leading slash, encode specific characters that might bypass filters
+            if (i == 0 && c == '/') {
+                encoded_path += c;
+            } else if (c == 'e' || c == 'E') {
+                encoded_path += (c == 'e') ? "%65" : "%45";  // 'e' or 'E'
+            } else if (c == 'n' || c == 'N') {
+                encoded_path += (c == 'n') ? "%6e" : "%4e";  // 'n' or 'N'
+            } else if (c == 'v' || c == 'V') {
+                encoded_path += (c == 'v') ? "%76" : "%56";  // 'v' or 'V'
+            } else {
+                encoded_path += c;
+            }
+        }
+        if (encoded_path != path) {
+            variations.push_back(encoded_path);
         }
     }
-    variations.push_back(mixed);
     
     return variations;
 }
@@ -165,8 +155,7 @@ std::vector<std::string> PathBypass::percentEncodedDots(const std::string& path)
         std::string base = path.substr(1);
         variations.push_back("/%2e/" + base);
         variations.push_back("/%2e%2e/" + base);
-        variations.push_back("/%252e/" + base);  // double encoded
-        variations.push_back("/%252e%252e/" + base);
+        // Remove double-encoded variations as they often cause false positives
     }
     
     return variations;
