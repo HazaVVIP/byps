@@ -70,12 +70,39 @@ public:
                     return response;
                 }
                 
+                // Set minimum TLS version to 1.2 for better compatibility
+                SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+                
+                // Set SSL options for better compatibility
+                SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+                
+                // Set cipher list for broad compatibility with modern servers
+                const char* cipher_list = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:"
+                                          "ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:"
+                                          "AES128-GCM-SHA256:AES256-GCM-SHA384:"
+                                          "AES128-SHA256:AES256-SHA256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4";
+                if (SSL_CTX_set_cipher_list(ctx, cipher_list) != 1) {
+                    Logger::getInstance().debug("Failed to set cipher list (non-fatal)");
+                }
+                
+                // Load default system certificates
+                if (SSL_CTX_set_default_verify_paths(ctx) != 1) {
+                    Logger::getInstance().debug("Failed to load default certificate paths (non-fatal)");
+                }
+                
                 if (!verify_ssl) {
                     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+                } else {
+                    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
                 }
                 
                 ssl = SSL_new(ctx);
                 SSL_set_fd(ssl, sockfd);
+                
+                // Enable SNI (Server Name Indication) for proper TLS handshake
+                if (SSL_set_tlsext_host_name(ssl, parsed.host.c_str()) != 1) {
+                    Logger::getInstance().debug("Failed to set SNI hostname (non-fatal)");
+                }
                 
                 if (SSL_connect(ssl) != 1) {
                     char err_buf[256];
