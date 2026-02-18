@@ -279,7 +279,7 @@ main() {
     
     read -p "Continue with installation? (Y/n): " -n 1 -r
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ ! -z $REPLY ]]; then
+    if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
         print_info "Installation cancelled"
         exit 0
     fi
