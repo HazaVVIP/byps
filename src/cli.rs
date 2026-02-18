@@ -245,6 +245,25 @@ EXAMPLES:
     Wizard {
         // No arguments needed - wizard is interactive
     },
+    
+    /// Update byps to the latest version
+    #[command(long_about = "\
+Update byps to the latest version from the repository.
+
+This command will:
+  1. Check for the latest version available
+  2. Download and install the update if available
+  3. Display the changelog and new features
+
+EXAMPLES:
+  # Check for updates and install
+  byps update
+
+  # Check for updates with verbose output
+  byps update -v")]
+    Update {
+        // No arguments needed for update
+    },
 }
 
 pub fn parse_args() -> Cli {

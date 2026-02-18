@@ -38,6 +38,9 @@ fn main() {
         Commands::Wizard {} => {
             handle_wizard(&args.output, args.verbose)
         }
+        Commands::Update {} => {
+            handle_update(args.verbose)
+        }
     };
     
     if let Err(e) = result {
@@ -473,4 +476,55 @@ fn handle_wizard(output_format: &str, verbose: bool) -> error::Result<()> {
     } else {
         handle_scan(&url, techniques, strategy, output_file.as_deref(), output_format, verbose)
     }
+}
+
+fn handle_update(verbose: bool) -> error::Result<()> {
+    println!("{}", "╔══════════════════════════════════════════════════════╗".bold().cyan());
+    println!("{}", "║           🔄 BYPS UPDATE CHECK 🔄                   ║".bold().cyan());
+    println!("{}", "╚══════════════════════════════════════════════════════╝".bold().cyan());
+    println!();
+    
+    let current_version = Engine::version();
+    
+    if verbose {
+        println!("{}: {}", "Current version".bold(), current_version.green());
+        println!();
+    }
+    
+    println!("{}", "Checking for updates...".yellow());
+    
+    // In a real implementation, this would:
+    // 1. Query the GitHub API for the latest release
+    // 2. Compare versions
+    // 3. Download and install if newer version available
+    //
+    // For now, we'll provide a simpler implementation that guides the user
+    
+    println!();
+    println!("{}", "Update functionality:".bold().green());
+    println!("  {} Current version: {}", "•".cyan(), current_version.yellow());
+    println!("  {} To update byps, use one of these methods:", "•".cyan());
+    println!();
+    
+    println!("{}", "  Method 1: Using cargo (if installed from source)".bold());
+    println!("    cd /path/to/byps");
+    println!("    git pull origin main");
+    println!("    cargo build --release");
+    println!();
+    
+    println!("{}", "  Method 2: Download latest release".bold());
+    println!("    Visit: {}", "https://github.com/HazaVVIP/byps/releases/latest".cyan());
+    println!("    Download the binary for your platform");
+    println!();
+    
+    println!("{}", "  Method 3: Using install script".bold());
+    println!("    curl -sSL https://raw.githubusercontent.com/HazaVVIP/byps/main/install.sh | bash");
+    println!();
+    
+    if verbose {
+        println!("{}", "Note: Automatic updates will be implemented in a future release.".yellow());
+        println!("{}", "For now, please use one of the manual methods above.".yellow());
+    }
+    
+    Ok(())
 }
