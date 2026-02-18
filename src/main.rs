@@ -6,7 +6,7 @@ mod error;
 
 use cli::{parse_args, Commands};
 use bridge::Engine;
-use output::{OutputFormatter, json::JsonFormatter, terminal::TerminalFormatter};
+use output::{OutputFormatter, json::JsonFormatter, terminal::TerminalFormatter, csv::CsvFormatter, html::HtmlFormatter};
 use config::Config;
 use colored::*;
 
@@ -64,6 +64,32 @@ fn handle_scan(url: &str, _techniques: &str, _strategy: &str, output_file: Optio
                 println!("{}", formatted);
             }
         }
+        "csv" => {
+            let formatter = CsvFormatter;
+            
+            if let Some(file) = output_file {
+                formatter.write_to_file(&result, file)?;
+                if verbose {
+                    println!("{}: {}", "Results written to".green(), file);
+                }
+            } else {
+                let formatted = formatter.format(&result)?;
+                println!("{}", formatted);
+            }
+        }
+        "html" => {
+            let formatter = HtmlFormatter;
+            
+            if let Some(file) = output_file {
+                formatter.write_to_file(&result, file)?;
+                if verbose {
+                    println!("{}: {}", "HTML report written to".green(), file);
+                }
+            } else {
+                let formatted = formatter.format(&result)?;
+                println!("{}", formatted);
+            }
+        }
         "terminal" | _ => {
             let formatter = TerminalFormatter;
             formatter.print_colored(&result)?;
@@ -84,6 +110,16 @@ fn handle_test(url: &str, technique: &str, output_format: &str, verbose: bool) -
     match output_format {
         "json" => {
             let formatter = JsonFormatter;
+            let formatted = formatter.format(&result)?;
+            println!("{}", formatted);
+        }
+        "csv" => {
+            let formatter = CsvFormatter;
+            let formatted = formatter.format(&result)?;
+            println!("{}", formatted);
+        }
+        "html" => {
+            let formatter = HtmlFormatter;
             let formatted = formatter.format(&result)?;
             println!("{}", formatted);
         }
