@@ -1,17 +1,33 @@
 // build.rs - Build script to compile C++ code for Rust FFI
 
+use std::path::PathBuf;
+
 fn main() {
+    // Get the absolute path to the build directory
+    let build_dir = PathBuf::from("build");
+    let abs_build_dir = std::fs::canonicalize(&build_dir)
+        .unwrap_or_else(|_| build_dir.clone());
+    
     // Tell cargo to look for shared libraries in the build directory
-    println!("cargo:rustc-link-search=native=build");
+    println!("cargo:rustc-link-search=native={}", abs_build_dir.display());
     
     // Tell cargo to tell rustc to link the byps_core shared library
     println!("cargo:rustc-link-lib=dylib=byps_core");
     
+    // Also link OpenSSL and other dependencies the C++ library needs
+    println!("cargo:rustc-link-lib=dylib=ssl");
+    println!("cargo:rustc-link-lib=dylib=crypto");
+    println!("cargo:rustc-link-lib=dylib=stdc++");
+    
     // Tell cargo to invalidate the built crate whenever the C++ sources change
     println!("cargo:rerun-if-changed=cpp/");
+    println!("cargo:rerun-if-changed=build/");
     
-    // Note: The C++ library should be built separately using CMake
-    // This build script just sets up the linking
-    println!("cargo:warning=Make sure to build the C++ library first using:");
-    println!("cargo:warning=  mkdir -p build && cd build && cmake .. && make");
+    // Check if library exists
+    let lib_path = abs_build_dir.join("libbyps_core.so");
+    if !lib_path.exists() {
+        println!("cargo:warning=C++ library not found at: {}", lib_path.display());
+        println!("cargo:warning=Make sure to build the C++ library first using:");
+        println!("cargo:warning=  mkdir -p build && cd build && cmake .. && make");
+    }
 }

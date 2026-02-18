@@ -2,6 +2,7 @@
 #include "common/types.hpp"
 #include "common/logger.hpp"
 #include "common/error.hpp"
+#include "common/utils.hpp"
 #include "techniques/path_bypass.hpp"
 #include "techniques/header_forge.hpp"
 #include "techniques/encoding.hpp"
@@ -70,9 +71,23 @@ int byps_engine_scan(BypsEngine* engine,
         std::stringstream ss;
         ss << "{\"url\":\"" << url << "\",";
         ss << "\"variations\":[";
-        for (size_t i = 0; i < path_variations.size(); i++) {
-            ss << "\"" << path_variations[i] << "\"";
-            if (i < path_variations.size() - 1) {
+        for (size_t i = 0; i < path_variations.size() && i < 10; i++) {  // Limit to 10 for testing
+            // Escape special characters in JSON
+            std::string escaped = path_variations[i];
+            // Simple escaping for now
+            size_t pos = 0;
+            while ((pos = escaped.find('\\', pos)) != std::string::npos) {
+                escaped.replace(pos, 1, "\\\\");
+                pos += 2;
+            }
+            pos = 0;
+            while ((pos = escaped.find('"', pos)) != std::string::npos) {
+                escaped.insert(pos, "\\");
+                pos += 2;
+            }
+            
+            ss << "\"" << escaped << "\"";
+            if (i < path_variations.size() - 1 && i < 9) {
                 ss << ",";
             }
         }
@@ -118,9 +133,22 @@ int byps_engine_test_technique(BypsEngine* engine,
         ss << "{\"technique\":\"" << technique_name << "\",";
         ss << "\"url\":\"" << url << "\",";
         ss << "\"variations\":[";
-        for (size_t i = 0; i < variations.size(); i++) {
-            ss << "\"" << variations[i] << "\"";
-            if (i < variations.size() - 1) {
+        for (size_t i = 0; i < variations.size() && i < 10; i++) {
+            // Escape special characters
+            std::string escaped = variations[i];
+            size_t pos = 0;
+            while ((pos = escaped.find('\\', pos)) != std::string::npos) {
+                escaped.replace(pos, 1, "\\\\");
+                pos += 2;
+            }
+            pos = 0;
+            while ((pos = escaped.find('"', pos)) != std::string::npos) {
+                escaped.insert(pos, "\\");
+                pos += 2;
+            }
+            
+            ss << "\"" << escaped << "\"";
+            if (i < variations.size() - 1 && i < 9) {
                 ss << ",";
             }
         }
