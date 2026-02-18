@@ -1,0 +1,66 @@
+# Byps Stealth Configuration
+# Low-profile scanning to avoid detection
+
+# Scan settings
+scan:
+  # Low concurrency to avoid rate limiting
+  max_threads: 2
+  
+  # Longer timeout for reliability
+  timeout_ms: 60000
+  
+  # Significant delay to appear natural
+  delay_ms: 2000
+  
+  # Follow redirects
+  follow_redirects: true
+  
+  # Verify SSL certificates
+  verify_ssl: true
+  
+  # Limited variations to reduce noise
+  max_variations: 10
+
+# HTTP client settings
+http:
+  # Realistic browser user agent
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  
+  # Complete browser-like headers
+  default_headers:
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+    Accept-Language: "en-US,en;q=0.9"
+    Accept-Encoding: "gzip, deflate, br"
+    Connection: "keep-alive"
+    Upgrade-Insecure-Requests: "1"
+    Sec-Fetch-Dest: "document"
+    Sec-Fetch-Mode: "navigate"
+    Sec-Fetch-Site: "none"
+    Sec-Fetch-User: "?1"
+
+# Use selective techniques
+techniques:
+  path_bypass: true
+  header_forge: true
+  url_encoding: false
+  unicode: false
+  protocol_abuse: false
+
+# Output settings
+output:
+  format: "json"
+  verbose: false
+  show_success_only: true
+
+# WAF detection
+waf_detection:
+  enabled: true
+  timeout_ms: 10000
+  confidence_threshold: 0.8
+
+# Resource paths
+resources:
+  wordlists:
+    paths: "resources/wordlists/paths.txt"
+    headers: "resources/wordlists/headers.txt"
+    methods: "resources/wordlists/methods.txt"
