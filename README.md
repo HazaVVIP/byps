@@ -60,64 +60,64 @@ byps wizard --help       # Wizard mode guide
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Installation
 
-- CMake 3.15+
-- C++17 compiler (g++, clang)
-- Rust 1.70+
-- OpenSSL development libraries
+The easiest way to install Byps is using the automated installer script:
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install cmake build-essential libssl-dev
-
-# macOS
-brew install cmake openssl
+wget https://raw.githubusercontent.com/HazaVVIP/byps/main/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
-### Build
+The installer will:
+- ✅ Automatically detect your operating system
+- ✅ Install all required dependencies (CMake, C++ compiler, OpenSSL, etc.)
+- ✅ Install Rust if not present
+- ✅ Clone and build the Byps project
+- ✅ Install the `byps` command globally
 
+**Supported Operating Systems:**
+- Ubuntu/Debian/Linux Mint
+- Fedora/RHEL/CentOS
+- Arch Linux/Manjaro
+- macOS (requires Homebrew)
+
+**Uninstall:**
 ```bash
-# 1. Build C++ core library
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
-cd ..
-
-# 2. Build Rust CLI
-cargo build --release
+./install.sh --uninstall
 ```
 
 ### Usage
 
 ```bash
 # Display help
-./target/release/byps -h           # Short help
-./target/release/byps --help       # Detailed help with examples
+byps -h           # Short help
+byps --help       # Detailed help with examples
 
 # List available bypass techniques
-./target/release/byps list
+byps list
 
 # Test a specific technique
-./target/release/byps test http://example.com/admin --technique path_bypass
+byps test http://example.com/admin --technique path_bypass
 
 # Full scan with all techniques
-./target/release/byps scan http://example.com/admin
+byps scan http://example.com/admin
 
 # Automated exploitation mode (NEW!)
-./target/release/byps exploit http://example.com/admin
+byps exploit http://example.com/admin
 
 # Interactive wizard mode (NEW!)
-./target/release/byps wizard
+byps wizard
 
 # Save results to file
-./target/release/byps scan http://example.com/admin -o results.html --output html
+byps scan http://example.com/admin -o results.html --output html
 
 # Use stealth mode
-./target/release/byps scan http://example.com/admin --strategy stealth
+byps scan http://example.com/admin --strategy stealth
 
 # Verbose output
-./target/release/byps scan http://example.com/admin -v --output terminal
+byps scan http://example.com/admin -v --output terminal
 ```
 
 ## 🎯 New Features
@@ -127,16 +127,16 @@ Automated exploitation mode that combines scanning with live testing:
 
 ```bash
 # Basic exploitation
-./target/release/byps exploit http://example.com/admin
+byps exploit http://example.com/admin
 
 # Fast exploitation with specific techniques
-./target/release/byps exploit http://example.com/api -t path_bypass,header_forge -s fast
+byps exploit http://example.com/api -t path_bypass,header_forge -s fast
 
 # Thorough exploitation with results saved
-./target/release/byps exploit http://example.com/secret -s thorough -o exploits.json
+byps exploit http://example.com/secret -s thorough -o exploits.json
 
 # Stealth exploitation with limited tests
-./target/release/byps exploit http://example.com/admin -s stealth -m 20 -v
+byps exploit http://example.com/admin -s stealth -m 20 -v
 ```
 
 **Features:**
@@ -151,10 +151,10 @@ Interactive guided mode perfect for beginners:
 
 ```bash
 # Start the interactive wizard
-./target/release/byps wizard
+byps wizard
 
 # Wizard with verbose output
-./target/release/byps wizard -v
+byps wizard -v
 ```
 
 **Wizard Process:**
@@ -172,7 +172,7 @@ The wizard provides a user-friendly interface with step-by-step guidance through
 
 ### Basic Scan
 ```bash
-$ ./target/release/byps scan http://127.0.0.1:8000/admin -v --output terminal
+$ byps scan http://127.0.0.1:8000/admin -v --output terminal
 
 Byps - WAF Bypass Testing Tool
 Version: 0.1.0
@@ -196,14 +196,14 @@ Variations Found: 10
 
 ### Test Specific Technique
 ```bash
-$ ./target/release/byps test http://example.com/secret --technique url_encoding -o results.json
+$ byps test http://example.com/secret --technique url_encoding -o results.json
 
 # Output: JSON with all encoding variations
 ```
 
 ### HTML Report
 ```bash
-$ ./target/release/byps scan http://example.com/api --output html -o report.html
+$ byps scan http://example.com/api --output html -o report.html
 
 # Generates a beautiful HTML report with styling
 ```
@@ -223,7 +223,7 @@ python3 tests/fixtures/mock_servers/header_server.py &
 python3 tests/fixtures/mock_servers/waf_server.py &
 
 # Test against mock servers
-./target/release/byps scan http://127.0.0.1:8000/admin
+byps scan http://127.0.0.1:8000/admin
 ```
 
 ## 📁 Project Structure
