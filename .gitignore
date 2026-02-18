@@ -68,3 +68,10 @@ libbyps_core.*
 # Editor backup files
 *.bak
 *.orig
+
+# Test output files
+test_result.json
+test_output.json
+result.txt
+*.html
+*.csv
