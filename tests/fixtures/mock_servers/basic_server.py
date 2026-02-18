@@ -1,97 +1,70 @@
 #!/usr/bin/env python3
 """
-Basic HTTP server for testing path bypass techniques.
-This server blocks /admin but allows various bypass variations.
+Basic HTTP Server for testing path bypass techniques.
+Tests normalization, encoding, and trailing slash behaviors.
 """
-
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import sys
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import unquote
 
-class BypassTestHandler(BaseHTTPRequestHandler):
+
+class BasicHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
-        """Log requests to stdout"""
-        sys.stdout.write("%s - - [%s] %s\n" %
-                         (self.address_string(),
-                          self.log_date_time_string(),
-                          format % args))
-        sys.stdout.flush()
-    
+        sys.stderr.write(f"[BASIC] {format % args}\n")
+
     def do_GET(self):
-        """Handle GET requests"""
-        path = self.path
+        path = self.path.split('?')[0]
         
-        # Block exact /admin path
+        # Block /admin (no trailing slash)
         if path == '/admin':
             self.send_response(403)
-            self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'TestServer/1.0')
+            self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(b'<html><body><h1>403 Forbidden</h1><p>Access Denied</p></body></html>')
+            self.wfile.write(b'<html><body><h1>403 Forbidden</h1><p>Access to /admin is denied</p></body></html>')
             return
         
-        # Allow trailing slash bypass
+        # Allow /admin/ (trailing slash bypass)
         if path == '/admin/':
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'TestServer/1.0')
+            self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(b'<html><body><h1>Admin Panel</h1><p>Bypass successful: trailing slash</p></body></html>')
+            self.wfile.write(b'<html><body><h1>Admin Panel</h1><p>Bypassed via trailing slash</p></body></html>')
             return
         
-        # Allow case variation bypass
-        if path.lower() == '/admin' and path != '/admin':
+        # Allow encoded version /%61dmin (URL encoding bypass)
+        if path == '/%61dmin':
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'TestServer/1.0')
+            self.send_header('Content-Type', 'text/html')
             self.end_headers()
-            self.wfile.write(b'<html><body><h1>Admin Panel</h1><p>Bypass successful: case variation</p></body></html>')
+            self.wfile.write(b'<html><body><h1>Admin Panel</h1><p>Bypassed via URL encoding</p></body></html>')
             return
         
-        # Allow dot segment bypass
-        if '/./' in path and 'admin' in path:
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.send_header('Server', 'TestServer/1.0')
-            self.end_headers()
-            self.wfile.write(b'<html><body><h1>Admin Panel</h1><p>Bypass successful: dot segment</p></body></html>')
-            return
-        
-        # Default response
+        # Allow all other paths
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.send_header('Server', 'TestServer/1.0')
+        self.send_header('Content-Type', 'text/html')
         self.end_headers()
-        self.wfile.write(b'<html><body><h1>Welcome</h1><p>Public page</p></body></html>')
-    
-    def do_POST(self):
-        """Handle POST requests"""
-        self.do_GET()
-    
-    def do_HEAD(self):
-        """Handle HEAD requests"""
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.send_header('Server', 'TestServer/1.0')
-        self.end_headers()
+        response = f'<html><body><h1>200 OK</h1><p>Path: {path}</p></body></html>'
+        self.wfile.write(response.encode())
 
-def run(host='127.0.0.1', port=8000):
+    def do_POST(self):
+        self.do_GET()
+
+
+def run_server(host='127.0.0.1', port=8000):
     server_address = (host, port)
-    httpd = HTTPServer(server_address, BypassTestHandler)
-    print(f'Starting basic test server on http://{host}:{port}')
-    print(f'Test URLs:')
-    print(f'  - http://{host}:{port}/admin (403 - blocked)')
-    print(f'  - http://{host}:{port}/admin/ (200 - bypass with trailing slash)')
-    print(f'  - http://{host}:{port}/ADMIN (200 - bypass with case variation)')
-    print(f'  - http://{host}:{port}/./admin (200 - bypass with dot segment)')
-    print(f'Press Ctrl+C to stop')
+    httpd = HTTPServer(server_address, BasicHandler)
+    print(f"Basic Server running on http://{host}:{port}")
+    print("Test cases:")
+    print(f"  - http://{host}:{port}/admin      -> 403 Forbidden")
+    print(f"  - http://{host}:{port}/admin/     -> 200 OK (trailing slash bypass)")
+    print(f"  - http://{host}:{port}/%61dmin    -> 200 OK (encoding bypass)")
+    print(f"  - http://{host}:{port}/other      -> 200 OK")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print('\nServer stopped')
+        print("\nShutting down Basic Server...")
         httpd.shutdown()
 
+
 if __name__ == '__main__':
-    port = 8000
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
-    run(port=port)
+    run_server()

@@ -1,5 +1,7 @@
 pub mod json;
 pub mod terminal;
+pub mod csv;
+pub mod html;
 
 use crate::error::Result;
 
