@@ -16,6 +16,13 @@
 namespace byps {
 namespace network {
 
+// TLS cipher list for broad compatibility with modern servers
+static const char* TLS_CIPHER_LIST = 
+    "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:"
+    "ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:"
+    "AES128-GCM-SHA256:AES256-GCM-SHA384:"
+    "AES128-SHA256:AES256-SHA256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4";
+
 class HttpClient::Impl {
 public:
     int timeout_ms;
@@ -77,11 +84,7 @@ public:
                 SSL_CTX_set_options(ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
                 
                 // Set cipher list for broad compatibility with modern servers
-                const char* cipher_list = "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:"
-                                          "ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:"
-                                          "AES128-GCM-SHA256:AES256-GCM-SHA384:"
-                                          "AES128-SHA256:AES256-SHA256:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4";
-                if (SSL_CTX_set_cipher_list(ctx, cipher_list) != 1) {
+                if (SSL_CTX_set_cipher_list(ctx, TLS_CIPHER_LIST) != 1) {
                     Logger::getInstance().debug("Failed to set cipher list (non-fatal)");
                 }
                 
