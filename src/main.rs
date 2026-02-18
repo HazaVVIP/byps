@@ -280,9 +280,11 @@ fn handle_exploit(url: &str, techniques: &str, strategy: &str, output_file: Opti
             if is_bypass {
                 let variation = var.get("variation").and_then(|v| v.as_str()).unwrap_or("?");
                 let status = var.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
+                let size = var.get("size").and_then(|s| s.as_i64()).unwrap_or(0);
                 let reason = var.get("reason").and_then(|r| r.as_str()).unwrap_or("unknown");
                 
-                println!("  {} {} (status: {}, reason: {})", "✓".green(), variation, status, reason);
+                println!("  {} {} (status: {}, size: {} bytes, reason: {})", 
+                         "✓".green(), variation, status, size, reason);
                 bypass_count += 1;
                 
                 if bypass_count >= 10 && !verbose {
