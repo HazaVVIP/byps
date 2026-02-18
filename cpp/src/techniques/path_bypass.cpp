@@ -73,12 +73,18 @@ std::vector<std::string> PathBypass::urlEncodingVariations(const std::string& pa
             // Keep leading slash, encode specific characters that might bypass filters
             if (i == 0 && c == '/') {
                 encoded_path += c;
-            } else if (c == 'e' || c == 'E') {
-                encoded_path += (c == 'e') ? "%65" : "%45";  // 'e' or 'E'
-            } else if (c == 'n' || c == 'N') {
-                encoded_path += (c == 'n') ? "%6e" : "%4e";  // 'n' or 'N'
-            } else if (c == 'v' || c == 'V') {
-                encoded_path += (c == 'v') ? "%76" : "%56";  // 'v' or 'V'
+            } else if (c == 'e') {
+                encoded_path += "%65";  // lowercase 'e' in hex
+            } else if (c == 'E') {
+                encoded_path += "%45";  // uppercase 'E' in hex
+            } else if (c == 'n') {
+                encoded_path += "%6e";  // lowercase 'n' in hex
+            } else if (c == 'N') {
+                encoded_path += "%4e";  // uppercase 'N' in hex
+            } else if (c == 'v') {
+                encoded_path += "%76";  // lowercase 'v' in hex
+            } else if (c == 'V') {
+                encoded_path += "%56";  // uppercase 'V' in hex
             } else {
                 encoded_path += c;
             }

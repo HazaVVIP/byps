@@ -276,6 +276,7 @@ int byps_engine_test_variations(BypsEngine* engine,
                     double size_diff_ratio = std::abs(static_cast<double>(response.body.length()) - 
                                                       static_cast<double>(baseline_size)) / baseline_size;
                     // Only flag if size difference is significant (>30%) AND response is larger
+                    // 30% threshold helps filter out minor variations while catching real content changes
                     if (size_diff_ratio > 0.3 && response.body.length() > baseline_size) {
                         bypass_success = true;
                         bypass_reason = "size_difference";
