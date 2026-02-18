@@ -8,6 +8,8 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
@@ -42,11 +44,14 @@ public:
         try {
             auto parsed = utils::parseURL(request.url);
             
+            Logger::getInstance().debug("Attempting connection to " + parsed.host + ":" + std::to_string(parsed.port));
+            
             // Create socket
             int sockfd = createSocket(parsed.host, parsed.port);
             if (sockfd < 0) {
                 response.status_code = 0;
                 response.status_message = "Connection failed";
+                Logger::getInstance().error("Failed to connect to " + parsed.host);
                 return response;
             }
             
@@ -55,11 +60,13 @@ public:
             SSL_CTX* ctx = nullptr;
             
             if (parsed.scheme == "https") {
+                Logger::getInstance().debug("Establishing SSL connection");
                 ctx = SSL_CTX_new(TLS_client_method());
                 if (!ctx) {
                     ::close(sockfd);
                     response.status_code = 0;
                     response.status_message = "SSL context creation failed";
+                    Logger::getInstance().error("SSL context creation failed");
                     return response;
                 }
                 
@@ -71,13 +78,17 @@ public:
                 SSL_set_fd(ssl, sockfd);
                 
                 if (SSL_connect(ssl) != 1) {
+                    char err_buf[256];
+                    ERR_error_string_n(ERR_get_error(), err_buf, sizeof(err_buf));
                     SSL_free(ssl);
                     SSL_CTX_free(ctx);
                     ::close(sockfd);
                     response.status_code = 0;
-                    response.status_message = "SSL connection failed";
+                    response.status_message = std::string("SSL connection failed: ") + err_buf;
+                    Logger::getInstance().error("SSL connection failed: " + std::string(err_buf));
                     return response;
                 }
+                Logger::getInstance().debug("SSL connection established");
             }
             
             // Build HTTP request
@@ -154,29 +165,92 @@ public:
     
 private:
     int createSocket(const std::string& host, int port) {
-        struct addrinfo hints, *result;
+        struct addrinfo hints, *result, *rp;
         std::memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         
         std::string port_str = std::to_string(port);
         if (getaddrinfo(host.c_str(), port_str.c_str(), &hints, &result) != 0) {
+            Logger::getInstance().error("Failed to resolve hostname: " + host);
             return -1;
         }
         
-        int sockfd = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-        if (sockfd < 0) {
-            freeaddrinfo(result);
-            return -1;
-        }
-        
-        if (connect(sockfd, result->ai_addr, result->ai_addrlen) < 0) {
-            ::close(sockfd);
-            freeaddrinfo(result);
-            return -1;
+        int sockfd = -1;
+        // Try each address until we successfully connect
+        for (rp = result; rp != nullptr; rp = rp->ai_next) {
+            sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+            if (sockfd < 0) {
+                continue; // Try next address
+            }
+            
+            // Set socket timeouts
+            struct timeval tv;
+            tv.tv_sec = timeout_ms / 1000;
+            tv.tv_usec = (timeout_ms % 1000) * 1000;
+            
+            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+                Logger::getInstance().debug("Failed to set socket receive timeout (non-fatal)");
+            }
+            if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+                Logger::getInstance().debug("Failed to set socket send timeout (non-fatal)");
+            }
+            
+            // Set socket to non-blocking for connect timeout
+            int flags = fcntl(sockfd, F_GETFL, 0);
+            fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+            
+            // Try to connect
+            int connect_result = connect(sockfd, rp->ai_addr, rp->ai_addrlen);
+            
+            if (connect_result < 0) {
+                if (errno == EINPROGRESS) {
+                    // Wait for connection with timeout
+                    fd_set write_fds;
+                    FD_ZERO(&write_fds);
+                    FD_SET(sockfd, &write_fds);
+                    
+                    struct timeval connect_tv;
+                    connect_tv.tv_sec = timeout_ms / 1000;
+                    connect_tv.tv_usec = (timeout_ms % 1000) * 1000;
+                    
+                    int select_result = select(sockfd + 1, nullptr, &write_fds, nullptr, &connect_tv);
+                    
+                    if (select_result <= 0) {
+                        ::close(sockfd);
+                        continue; // Try next address
+                    }
+                    
+                    // Check if connection was successful
+                    int error = 0;
+                    socklen_t len = sizeof(error);
+                    if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0 || error != 0) {
+                        ::close(sockfd);
+                        continue; // Try next address
+                    }
+                    // Connection successful
+                } else {
+                    ::close(sockfd);
+                    continue; // Try next address
+                }
+            }
+            
+            // Set socket back to blocking mode
+            fcntl(sockfd, F_SETFL, flags);
+            
+            // Connection successful
+            Logger::getInstance().debug("Successfully connected to " + host + ":" + port_str);
+            break;
         }
         
         freeaddrinfo(result);
+        
+        if (rp == nullptr) {
+            // No address succeeded
+            Logger::getInstance().error("Failed to connect to " + host + ":" + port_str);
+            return -1;
+        }
+        
         return sockfd;
     }
     
