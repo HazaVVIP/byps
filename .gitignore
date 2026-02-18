@@ -1,0 +1,70 @@
+# Build artifacts
+build/
+target/
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Rust
+Cargo.lock
+
+# Test artifacts
+*.log
+*.gcda
+*.gcno
+*.gcov
+coverage/
+coverage.info
+coverage_html/
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+.tox/
+
+# Documentation
+docs/_build/
+docs/.doctrees/
+
+# Package files
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# Binaries
+byps
+byps_core
+libbyps_core.*
+
+# Editor backup files
+*.bak
+*.orig
