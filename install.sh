@@ -138,7 +138,6 @@ setup_repository() {
         cd "$REPO_DIR"
         git fetch origin
         git reset --hard origin/main
-        git pull origin main
         print_success "Repository updated successfully"
     else
         print_info "Cloning repository to $REPO_DIR..."
@@ -279,7 +278,7 @@ main() {
     
     read -p "Continue with installation? (Y/n): " -n 1 -r
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]] && [[ -n $REPLY ]]; then
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
         print_info "Installation cancelled"
         exit 0
     fi
