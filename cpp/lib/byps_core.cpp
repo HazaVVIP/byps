@@ -248,17 +248,36 @@ int byps_engine_test_variations(BypsEngine* engine,
             bool bypass_success = false;
             std::string bypass_reason = "failed";
             
-            // Success criteria: status code changed from 403/401 to 200/30x or size changed significantly
-            if (baseline_status >= 400 && response.status_code >= 200 && response.status_code < 400) {
-                bypass_success = true;
-                bypass_reason = "status_change";
-                successful_bypasses++;
+            // Skip if request failed (status 0)
+            if (response.status_code == 0) {
+                bypass_success = false;
+                bypass_reason = "connection_failed";
+            }
+            // Success criteria: status code changed from 403/401 to 200/30x
+            else if (baseline_status >= 400 && response.status_code >= 200 && response.status_code < 400) {
+                // Additional check: verify it's not a soft 404 or redirect to error page
+                // Check for common error page indicators in response body (case-insensitive)
+                std::string body_lower = utils::toLower(response.body);
+                if (body_lower.find("404") != std::string::npos || 
+                    body_lower.find("not found") != std::string::npos ||
+                    body_lower.find("page not found") != std::string::npos) {
+                    // Body contains error indicators
+                    bypass_success = false;
+                    bypass_reason = "soft_404_detected";
+                } else {
+                    // Status changed and body doesn't look like an error page
+                    bypass_success = true;
+                    bypass_reason = "status_change";
+                    successful_bypasses++;
+                }
             } else if (response.status_code == baseline_status) {
                 // Check for significant size difference (might indicate different content)
                 if (baseline_size > 0 && response.body.length() > 0) {
                     double size_diff_ratio = std::abs(static_cast<double>(response.body.length()) - 
                                                       static_cast<double>(baseline_size)) / baseline_size;
-                    if (size_diff_ratio > 0.3) { // 30% size difference
+                    // Only flag if size difference is significant (>30%) AND response is larger
+                    // 30% threshold helps filter out minor variations while catching real content changes
+                    if (size_diff_ratio > 0.3 && response.body.length() > baseline_size) {
                         bypass_success = true;
                         bypass_reason = "size_difference";
                         successful_bypasses++;

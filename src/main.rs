@@ -256,34 +256,16 @@ fn handle_exploit(url: &str, techniques: &str, strategy: &str, output_file: Opti
         .and_then(|t| t.as_i64())
         .unwrap_or(0) as usize;
     
-    println!("Testing {} variations:", total_tested);
+    println!();
     
-    // Show progress for first few tests
+    println!("{}", "Phase 3: Results Summary".bold().green());
+    
+    // Get variations array for results display
     let empty_vec = vec![];
     let variations_tested = test_parsed.get("variations")
         .and_then(|v| v.as_array())
         .unwrap_or(&empty_vec);
     
-    for (i, var) in variations_tested.iter().take(std::cmp::min(5, total_tested)).enumerate() {
-        let variation = var.get("variation").and_then(|v| v.as_str()).unwrap_or("?");
-        let status = var.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
-        let is_bypass = var.get("bypass").and_then(|b| b.as_bool()).unwrap_or(false);
-        
-        if verbose {
-            let marker = if is_bypass { "✓".green() } else { "→".cyan() };
-            println!("  {} Testing variation {}/{}: {} -> {}", 
-                     marker, i + 1, total_tested, variation, status);
-        } else {
-            println!("  {} Testing variation {}/{}", "→".cyan(), i + 1, total_tested);
-        }
-    }
-    
-    if total_tested > 5 {
-        println!("  {} ... ({} more tests)", "→".cyan(), total_tested - 5);
-    }
-    println!();
-    
-    println!("{}", "Phase 3: Results Summary".bold().green());
     println!("  {} Total variations tested: {}", "•".cyan(), total_tested);
     println!("  {} Successful bypasses: {}", "•".green(), successful_bypasses);
     println!("  {} Failed attempts: {}", "•".red(), failed_attempts);
@@ -298,9 +280,11 @@ fn handle_exploit(url: &str, techniques: &str, strategy: &str, output_file: Opti
             if is_bypass {
                 let variation = var.get("variation").and_then(|v| v.as_str()).unwrap_or("?");
                 let status = var.get("status").and_then(|s| s.as_i64()).unwrap_or(0);
+                let size = var.get("size").and_then(|s| s.as_i64()).unwrap_or(0);
                 let reason = var.get("reason").and_then(|r| r.as_str()).unwrap_or("unknown");
                 
-                println!("  {} {} (status: {}, reason: {})", "✓".green(), variation, status, reason);
+                println!("  {} {} (status: {}, size: {} bytes, reason: {})", 
+                         "✓".green(), variation, status, size, reason);
                 bypass_count += 1;
                 
                 if bypass_count >= 10 && !verbose {
