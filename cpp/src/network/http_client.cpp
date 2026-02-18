@@ -189,8 +189,12 @@ private:
             tv.tv_sec = timeout_ms / 1000;
             tv.tv_usec = (timeout_ms % 1000) * 1000;
             
-            setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-            setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+            if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+                Logger::getInstance().debug("Failed to set socket receive timeout (non-fatal)");
+            }
+            if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+                Logger::getInstance().debug("Failed to set socket send timeout (non-fatal)");
+            }
             
             // Set socket to non-blocking for connect timeout
             int flags = fcntl(sockfd, F_GETFL, 0);
