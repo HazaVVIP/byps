@@ -13,122 +13,233 @@ This tool is designed for security professionals to test systems they have expli
 - ❌ Never use against production systems without permission
 - ❌ Never use for malicious purposes
 
-## Development Status
+## ✨ Features
 
-✅ **Core implementation complete** - Basic functionality working  
-🚧 **Advanced features in progress** - WAF detection, request smuggling, etc.
+### Bypass Techniques
+- **Path Manipulation**: Trailing slash, URL encoding, case variation, path traversal
+- **Header Forgery**: X-Forwarded-For, X-Original-URL, Host header manipulation
+- **URL Encoding**: Single, double, triple encoding, mixed encoding
+- **Unicode Techniques**: Normalization variations, homograph substitution, zero-width characters
+- **Protocol Abuse**: HTTP version manipulation, method variation
 
-### 📚 Research Documentation
+### Performance & Architecture
+- **High Performance**: C++ core engine for maximum speed
+- **Network Layer**: Built-in HTTP/HTTPS client with TLS/SSL support
+- **Connection Pooling**: Efficient connection reuse for faster scanning
+- **Safe CLI**: Rust-based CLI interface with memory safety
+- **Multiple Output Formats**: JSON, CSV, HTML, and colored terminal output
 
-All comprehensive research and planning documentation is available in the **[Developer](./Developer/)** directory:
+### Configuration
+- **Pre-configured Strategies**: Default, Aggressive, and Stealth modes
+- **Wordlists**: Built-in paths, headers, and HTTP methods
+- **Flexible**: Easy customization via YAML config files
 
-- **[Quick Start Guide](./Developer/QUICK_START.md)** - Start here for navigation
-- **[Research Plan](./Developer/RESEARCH_PLAN.md)** - What we're researching
-- **[Development Roadmap](./Developer/DEVELOPMENT_ROADMAP.md)** - 21-week implementation plan
-- **[Testing Strategy](./Developer/TESTING_STRATEGY.md)** - How we'll test (Python localhost servers)
-- **[Architecture Research](./Developer/ARCHITECTURE_RESEARCH.md)** - System design and patterns
-- **[Technique Research](./Developer/TECHNIQUE_RESEARCH.md)** - 20+ bypass techniques
-- **[Technology Stack](./Developer/TECHNOLOGY_STACK.md)** - C++17, Rust, libraries
+## 🚀 Quick Start
 
-### 📋 Project Structure
+### Prerequisites
 
-See [DIR.txt](./DIR.txt) for the complete planned directory structure.
+- CMake 3.15+
+- C++17 compiler (g++, clang)
+- Rust 1.70+
+- OpenSSL development libraries
 
-## Features
+```bash
+# Ubuntu/Debian
+sudo apt-get install cmake build-essential libssl-dev
 
-- **Multiple Bypass Techniques**:
-  - Path manipulation (trailing slash, URL encoding, case variation)
-  - Header forgery (X-Forwarded-For, X-Original-URL, Host header)
-  - Protocol abuse (HTTP version, method variation)
-  - Encoding techniques (URL encoding, HTML entities)
-
-- **High Performance**: C++ core for maximum speed
-- **Safe CLI**: Rust-based CLI interface
-- **Flexible Output**: JSON and colored terminal output
-- **Testing Infrastructure**: Python mock servers for safe testing
-
-## Quick Start
+# macOS
+brew install cmake openssl
+```
 
 ### Build
 
 ```bash
-# Build C++ core
+# 1. Build C++ core library
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 cd ..
 
-# Build Rust CLI
+# 2. Build Rust CLI
 cargo build --release
 ```
 
-### Test
+### Usage
 
 ```bash
-# Start a test server
+# List available bypass techniques
+./target/release/byps list
+
+# Test a specific technique
+./target/release/byps test http://example.com/admin --technique path_bypass
+
+# Full scan with all techniques
+./target/release/byps scan http://example.com/admin
+
+# Save results to file
+./target/release/byps scan http://example.com/admin -o results.html --output html
+
+# Use stealth mode
+./target/release/byps scan http://example.com/admin --strategy stealth
+
+# Verbose output
+./target/release/byps scan http://example.com/admin -v --output terminal
+```
+
+## 📖 Examples
+
+### Basic Scan
+```bash
+$ ./target/release/byps scan http://127.0.0.1:8000/admin -v --output terminal
+
+Byps - WAF Bypass Testing Tool
+Version: 0.1.0
+
+Scanning: http://127.0.0.1:8000/admin
+=== Scan Results ===
+Target URL: "http://127.0.0.1:8000/admin"
+
+Variations Found: 10
+  1. /admin/
+  2. /admin//
+  3. /admin/.
+  4. /admin/./
+  5. %2Fadmin
+  6. %252Fadmin
+  7. %25252Fadmin
+  8. %2fadmin
+  9. /%61%64%6d%69%6e
+  10. /ADMIN
+```
+
+### Test Specific Technique
+```bash
+$ ./target/release/byps test http://example.com/secret --technique url_encoding -o results.json
+
+# Output: JSON with all encoding variations
+```
+
+### HTML Report
+```bash
+$ ./target/release/byps scan http://example.com/api --output html -o report.html
+
+# Generates a beautiful HTML report with styling
+```
+
+## 🧪 Testing
+
+The project includes Python mock servers for safe localhost testing:
+
+```bash
+# Start basic path bypass server (port 8000)
 python3 tests/fixtures/mock_servers/basic_server.py &
 
-# Run a scan
+# Start header bypass server (port 8001)
+python3 tests/fixtures/mock_servers/header_server.py &
+
+# Start mock WAF server (port 8002)
+python3 tests/fixtures/mock_servers/waf_server.py &
+
+# Test against mock servers
 ./target/release/byps scan http://127.0.0.1:8000/admin
-
-# Test specific technique
-./target/release/byps test http://127.0.0.1:8000/admin --technique path_bypass
-
-# List available techniques
-./target/release/byps list
 ```
 
-## Testing Infrastructure
-
-Python mock servers for localhost testing:
-
-```bash
-# Basic path bypass server (port 8000)
-python3 tests/fixtures/mock_servers/basic_server.py
-
-# Header bypass server (port 8001)
-python3 tests/fixtures/mock_servers/header_server.py
-
-# Mock WAF server (port 8002)
-python3 tests/fixtures/mock_servers/waf_server.py
-```
-
-## Architecture
+## 📁 Project Structure
 
 ```
-Rust CLI Layer (arg parsing, output) 
-    ↓ FFI
-C++ Core Engine (bypass techniques, network, WAF detection)
+byps/
+├── cpp/                    # C++ core engine
+│   ├── include/           # Header files
+│   │   ├── common/        # Utilities, logger, error handling
+│   │   ├── network/       # HTTP client, TLS, connection pool
+│   │   └── techniques/    # Bypass technique implementations
+│   ├── src/               # Implementation files
+│   └── lib/               # FFI bridge (byps_core.cpp)
+├── src/                   # Rust CLI layer
+│   ├── main.rs           # CLI entry point
+│   ├── cli.rs            # Command-line argument parsing
+│   ├── bridge.rs         # FFI bindings to C++ core
+│   └── output/           # Output formatters (JSON, CSV, HTML, Terminal)
+├── resources/            # Wordlists and configurations
+│   ├── wordlists/        # paths.txt, headers.txt, methods.txt
+│   └── configs/          # default.yaml, aggressive.yaml, stealth.yaml
+├── tests/                # Test infrastructure
+│   ├── cpp/              # C++ unit tests
+│   └── fixtures/         # Mock servers for testing
+└── CMakeLists.txt        # C++ build configuration
 ```
 
-## Implementation Status
+## 🔧 Configuration
 
-- [x] Project structure and build system
-- [x] Common utilities (logger, error handling, utils)
-- [x] Path bypass techniques
-- [x] Header forgery techniques
-- [x] Encoding techniques
-- [x] Protocol abuse basics
-- [x] C API / FFI bridge
-- [x] Rust CLI interface
-- [x] Python mock test servers
-- [x] JSON output formatter
-- [x] Terminal output formatter
-- [ ] Network layer (HTTP client)
+Configuration files are located in `resources/configs/`:
+
+- `default.yaml` - Balanced scanning with moderate speed
+- `aggressive.yaml` - Fast, high-concurrency scanning
+- `stealth.yaml` - Slow, low-profile scanning to avoid detection
+
+Example config:
+```yaml
+scan:
+  max_threads: 10
+  timeout_ms: 30000
+  delay_ms: 100
+  
+techniques:
+  path_bypass: true
+  header_forge: true
+  url_encoding: true
+  unicode: true
+  protocol_abuse: true
+```
+
+## 🛠️ Development
+
+### Implementation Status
+
+- ✅ Project structure and build system
+- ✅ Common utilities (logger, error handling, utils)
+- ✅ Path bypass techniques
+- ✅ Header forgery techniques
+- ✅ Encoding techniques (URL, HTML, Unicode)
+- ✅ Unicode normalization and homographs
+- ✅ Protocol abuse basics
+- ✅ Network layer (HTTP/HTTPS client with TLS)
+- ✅ Connection pooling
+- ✅ C API / FFI bridge
+- ✅ Rust CLI interface
+- ✅ All output formatters (JSON, CSV, HTML, Terminal)
+- ✅ Python mock test servers
+- ✅ Resources (wordlists, configs)
+- ✅ End-to-end testing
+
+### Future Enhancements
 - [ ] WAF detection engine
-- [ ] Request smuggling
-- [ ] Advanced timing techniques
-- [ ] Complete test suite
-- [ ] Documentation
+- [ ] Request smuggling techniques
+- [ ] Advanced timing attack techniques
+- [ ] Complete integration tests
+- [ ] Performance benchmarks
 
-## Contributing
+## 📚 Documentation
 
-See [Developer Documentation](./Developer/) for contributing guidelines.
+- Main documentation is in this README
+- Mock server usage: `tests/fixtures/mock_servers/README.md`
+- Implementation details: `IMPLEMENTATION_SUMMARY.md`
+- Demo walkthrough: `DEMO.md`
 
-## License
+## 🤝 Contributing
+
+Contributions are welcome! Please ensure:
+1. Code follows existing style
+2. Tests pass (`cargo test`, C++ tests)
+3. Documentation is updated
+4. Changes are for authorized security testing purposes
+
+## 📄 License
 
 MIT License - see LICENSE file
 
 ---
 
 **Made with ❤️ for the security community**
+
+**Status**: ✅ Fully functional - Ready for authorized testing
