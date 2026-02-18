@@ -103,7 +103,7 @@ EXAMPLES:
         strategy: String,
         
         /// Output file path
-        #[arg(short = 'o', long, value_name = "FILE")]
+        #[arg(short = 'f', long, value_name = "FILE")]
         output_file: Option<String>,
     },
     
@@ -216,7 +216,7 @@ EXAMPLES:
         strategy: String,
         
         /// Output file for successful exploits
-        #[arg(short = 'o', long, value_name = "FILE")]
+        #[arg(short = 'f', long, value_name = "FILE")]
         output_file: Option<String>,
         
         /// Maximum number of variations to test (0 = unlimited)
