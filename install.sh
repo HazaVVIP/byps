@@ -134,6 +134,7 @@ install_rust() {
 setup_repository() {
     if [ -d "$REPO_DIR" ]; then
         print_info "Repository already exists at $REPO_DIR"
+        print_warning "Updating repository will discard any local changes..."
         print_info "Updating repository..."
         cd "$REPO_DIR"
         git fetch origin
@@ -152,6 +153,13 @@ build_cpp_core() {
     print_info "Building C++ core engine..."
     
     cd "$REPO_DIR"
+    
+    # Clean build directory for fresh build
+    if [ -d "$BUILD_DIR" ]; then
+        print_info "Cleaning previous build..."
+        rm -rf "$BUILD_DIR"
+    fi
+    
     mkdir -p "$BUILD_DIR"
     cd "$BUILD_DIR"
     
